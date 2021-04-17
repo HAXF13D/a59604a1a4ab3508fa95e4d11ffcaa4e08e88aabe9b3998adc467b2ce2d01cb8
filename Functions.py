@@ -3,7 +3,30 @@ import sqlite3
 from config import db_name
 
 # Объявление текстовых констант на статус отправки файлов
-from Txt_Const import NOT_DONE, DONE
+from Txt_Const import NOT_DONE, DONE, STATUS_ERROR_MSG
+
+
+def generate_status_msg(user_queue):
+    if 5 <= user_queue[0] <= 20:
+        file_spell = "файлов"
+    elif user_queue[0] % 10 == 1:
+        file_spell = "файл"
+    elif 2 <= user_queue[0] % 10 <= 4:
+        file_spell = "файла"
+    else:
+        file_spell = "файлов"
+
+    if not len(user_queue[1]) == 0:
+        status_msg = f"Всего в очереди {user_queue[0]} {file_spell}\n\n"
+        nearest_file = user_queue[0] - user_queue[1][0]
+        # Закомментить стркоу ниже, если котики не нужны :(
+        status_msg += "А пока вы ждете, держите милого котика :3\n\n"
+        for status in user_queue[1]:
+            nearest_file = min(user_queue[0] - status, nearest_file)
+        status_msg += f"Ближайший файл находится на позиции №{nearest_file}"
+        return status_msg
+    else:
+        return STATUS_ERROR_MSG
 
 
 # Функция проверки расширения файла
@@ -140,10 +163,28 @@ def add_file(user_id):
     cur = con.cursor()
     cur.execute(f'''SELECT queue FROM users WHERE user_id = {user_id}''')
     number = cur.fetchone()[0]
-    print(number)
     query = "UPDATE users SET queue = '{0}', req_status = '{1}' WHERE user_id = '{2}'".format(number + 1,
                                                                                               DONE,
                                                                                               user_id)
+    cur.execute(query)
+    con.commit()
+    con.close()
+
+
+def remove_file(user_id):
+    con = sqlite3.connect(db_name)
+    cur = con.cursor()
+    cur.execute(f'''SELECT queue FROM users WHERE user_id = {user_id}''')
+    number = cur.fetchone()[0]
+    if number == 1:
+        query = "UPDATE users SET queue = '{0}', req_status = '{1}' WHERE user_id = '{2}'".format(number - 1,
+                                                                                                  NOT_DONE,
+                                                                                                  user_id)
+    else:
+        query = "UPDATE users SET queue = '{0}', req_status = '{1}' WHERE user_id = '{2}'".format(number - 1,
+                                                                                                  DONE,
+                                                                                                  user_id)
+
     cur.execute(query)
     con.commit()
     con.close()

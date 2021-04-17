@@ -1,20 +1,15 @@
-from Rest_api import *
-from Functions import *
-from aiogram import types, Bot, executor, Dispatcher
-from aiogram.types import KeyboardButton as KeyBut
+import random
 from threading import *
 
+from aiogram import Bot, executor, Dispatcher
+
+from Functions import *
+from Rest_api import *
+from Txt_Const import *
 from config import tg_token
+
 # Массив команд для бота
-from Txt_Const import COMMANDS
 
-# Объявление текстовых констант
-from Txt_Const import START_SCREEN, HELP_SCREEN, ABOUT_SCREEN, STATUS_SCREEN, UPLOAD_SCREEN, \
-    IN_WORK_SCREEN, UPLOAD_MESSAGE
-
-# Объявление текстовых сообщений-констант
-from Txt_Const import HELP_MSG, START_MSG, STATUS_MSG, SECOND_ERROR_MSG, ERROR_MSG, CHOOSE_MSG, SUCCESS_MSG, \
-    STATUS_ERROR_MSG, FILE_ERROR_MSG
 
 # Создание базы данных
 make_bd()
@@ -24,25 +19,6 @@ dp = Dispatcher(bot)
 """
 Обьявление кнопок
 """
-button_back = KeyBut('Назад')
-button_help = KeyBut('Помощь')
-button_status = KeyBut('Статус')
-button_about = KeyBut('Описание')
-button_upload = KeyBut('Загрузить файл .fpx или .frx')
-
-back_kb = types.ReplyKeyboardMarkup(resize_keyboard=True).add(
-    button_back)
-
-start_kb = types.ReplyKeyboardMarkup(resize_keyboard=True).row(
-    button_upload).add(
-    button_about,
-    button_help)
-
-in_work_kb = types.ReplyKeyboardMarkup(resize_keyboard=True).row(
-    button_upload).row(
-    button_status).add(
-    button_about,
-    button_help)
 
 t1 = Thread(target=misha_func)
 t1.start()
@@ -53,7 +29,6 @@ t1.start()
 @dp.message_handler(content_types=['document', 'text'])
 async def handle_messages(messages: types.Message):
     message = json.loads(str(messages))
-
     is_bot = message['from']['is_bot']
     if not is_bot:
         user_id = message['from']['id']
@@ -69,14 +44,9 @@ async def handle_messages(messages: types.Message):
                 # Если введена команда /start
                 if msg_text == '/start':
                     # Проверка отправлял ли уже пользователь файлы на обработку
-                    if req_search(user_id):
-                        await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, IN_WORK_SCREEN)
-                    else:
-                        await bot.send_message(chat_id=chat_id, text=START_MSG, reply_markup=start_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, START_SCREEN)
+                    await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
+                                           disable_web_page_preview=True)
+                    change_screen(user_id, IN_WORK_SCREEN)
 
                 # Если введена команда /help
                 elif msg_text == '/help':
@@ -86,91 +56,35 @@ async def handle_messages(messages: types.Message):
 
                     # Если введена команда /status
                 elif msg_text == '/status':
-                    if req_search(user_id):
-                        await bot.send_message(chat_id=chat_id, text=STATUS_MSG, reply_markup=back_kb,
-                                               disable_web_page_preview=True)
+                    user_queue = check_file_status(user_id)
+                    if user_queue is not None:
+                        status_msg = generate_status_msg(user_queue)
+                        # Код ниже отправляет сообщение без котят :(
+                        # await bot.send_message(chat_id=chat_id, text=status_msg, reply_markup=back_kb,
+                        #                       disable_web_page_preview=True)
+                        random.seed()
+                        kitten_number = random.randint(1, 22)
+                        path = f'./Kittens/{kitten_number}.jpg'
+                        await bot.send_photo(chat_id=chat_id,
+                                             photo=open(f'{path}', 'rb'),
+                                             caption=status_msg,
+                                             reply_markup=back_kb)
                         change_screen(user_id, STATUS_SCREEN)
+
                     else:
                         await bot.send_message(chat_id=chat_id, text=STATUS_ERROR_MSG,
                                                disable_web_page_preview=True)
-                # Если текущий экран - начальный
-                elif cur_screen == START_SCREEN:
-                    # Если поступила команда "описание"
-                    if msg_text == 'описание':
-                        await bot.send_message(chat_id=chat_id, text=START_MSG, reply_markup=back_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, ABOUT_SCREEN)
-
-                    # Если поступила команда на загрузку файла
-                    elif msg_text == 'загрузить файл .fpx или .frx':
-                        await bot.send_message(chat_id=chat_id, text=UPLOAD_MESSAGE, reply_markup=back_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, UPLOAD_SCREEN)
-
-                    # Если поступила команда "помощь"
-                    elif msg_text == 'помощь':
-                        await bot.send_message(chat_id=chat_id, text=HELP_MSG, reply_markup=back_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, HELP_SCREEN)
-
                 # Если текущий экран - экран помощи
-                elif cur_screen == HELP_SCREEN:
+                elif cur_screen in BACK_SCREENS:
                     # Если поступила команда "назад"
                     if msg_text == 'назад':
                         # Проверка отправлял ли уже пользователь файлы на обработку
-                        if req_search(user_id):
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, IN_WORK_SCREEN)
-                        else:
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=start_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, START_SCREEN)
+                        await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
+                                               disable_web_page_preview=True)
+                        change_screen(user_id, IN_WORK_SCREEN)
 
-                # Если текущий экран - экран о боте
-                elif cur_screen == ABOUT_SCREEN:
-                    # Если поступила команда "назад"
-                    if msg_text == 'назад':
-                        # Проверка отправлял ли уже пользователь файлы на обработку
-                        if req_search(user_id):
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, IN_WORK_SCREEN)
-                        else:
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=start_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, START_SCREEN)
-
-                # Если текущий экран - экран проверки статуса обработки файла
-                elif cur_screen == STATUS_SCREEN:
-                    # Если поступила команда "назад"
-                    if msg_text == 'назад':
-                        # Проверка отправлял ли уже пользователь файлы на обработку
-                        if req_search(user_id):
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, IN_WORK_SCREEN)
-                        else:
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=start_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, START_SCREEN)
-
-                # Если текущий экран - экран загрузки файла
-                elif cur_screen == UPLOAD_SCREEN:
-                    # Если поступила команда "назад"
-                    if msg_text == 'назад':
-                        # Проверка отправлял ли уже пользователь файлы на обработку
-                        if req_search(user_id):
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, IN_WORK_SCREEN)
-                        else:
-                            await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=start_kb,
-                                                   disable_web_page_preview=True)
-                            change_screen(user_id, START_SCREEN)
-
-                # Если текущий экран - рабочий экран
                 elif cur_screen == IN_WORK_SCREEN:
+
                     if msg_text == 'загрузить файл .fpx или .frx':
                         await bot.send_message(chat_id=chat_id, text=UPLOAD_MESSAGE, reply_markup=back_kb,
                                                disable_web_page_preview=True)
@@ -181,12 +95,26 @@ async def handle_messages(messages: types.Message):
                         change_screen(user_id, ABOUT_SCREEN)
 
                     elif msg_text == 'статус':
-                        await bot.send_message(chat_id=chat_id, text=STATUS_MSG, reply_markup=back_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, STATUS_SCREEN)
+                        user_queue = check_file_status(user_id)
+                        if user_queue is not None:
+                            status_msg = generate_status_msg(user_queue)
+                            # Код ниже отправляет сообщение без котят :(
+                            # await bot.send_message(chat_id=chat_id, text=status_msg, reply_markup=back_kb,
+                            #                       disable_web_page_preview=True)
+                            random.seed()
+                            kitten_number = random.randint(1, 22)
+                            path = f'./Kittens/{kitten_number}.jpg'
+                            await bot.send_photo(chat_id=chat_id,
+                                                 photo=open(f'{path}', 'rb'),
+                                                 caption=status_msg,
+                                                 reply_markup=back_kb)
+                            change_screen(user_id, STATUS_SCREEN)
+                        else:
+                            await bot.send_message(chat_id=chat_id, text=STATUS_ERROR_MSG,
+                                                   disable_web_page_preview=True)
 
                     elif msg_text == 'помощь':
-                        await bot.send_message(chat_id=chat_id, text=STATUS_MSG, reply_markup=back_kb,
+                        await bot.send_message(chat_id=chat_id, text=HELP_MSG, reply_markup=back_kb,
                                                disable_web_page_preview=True)
                         change_screen(user_id, HELP_SCREEN)
 
@@ -203,37 +131,19 @@ async def handle_messages(messages: types.Message):
                 if extension(message.get('document').get('file_name')):
                     file_ext = get_extension(message.get('document').get('file_name'))
                     file_info = await bot.get_file(message.get('document').get('file_id'))
+                    original_name = message.get('document').get('file_name')
                     url = f"https://api.telegram.org/file/bot{tg_token}/{file_info.file_path}"
                     # file = requests.get(url)
+                    add_file(user_id)
                     await bot.send_message(chat_id=chat_id, text=SUCCESS_MSG, reply_markup=in_work_kb)
                     change_screen(user_id, IN_WORK_SCREEN)
 
-                    number = -1
-                    for cur_file in files:
-                        number = max(number, cur_file.number)
-                    number += 1
+                    number = len(files)
                     files.insert(0, Files(file_number=number,
                                           file_name=f"report_{number}.{file_ext}",
+                                          original_name=original_name,
                                           file_url=url,
                                           user_id=user_id))
-
-                    """
-                    Если очередь на сервере пуста, то:
-                        мы добавляем файл на сервер
-                    ИНАЧАЕ:
-                         добавляем файл в БД очереди
-                    """
-                    """
-                    Запускаем асинхронный цикл while true
-                        В цикле мы опршиванем сервер, до получения статуса success или ошибки
-                    Как только статус == success
-                        Мы выводим пользователю, что его файл обработан и отправялем ему файл
-                        удаляем файлы с сервера
-                        добавляем файл из очереди
-                        удаляем файл из очереди тут                        
-                    """
-
-                # Вывод ошибки при некорректном расширении файла
                 else:
                     await bot.send_message(chat_id=chat_id, text=FILE_ERROR_MSG, reply_markup=back_kb,
                                            disable_web_page_preview=True)
@@ -241,16 +151,12 @@ async def handle_messages(messages: types.Message):
             elif message.get('text') is not None:
                 msg_text = message['text'].lower()
                 if msg_text == 'назад':
-                    if req_search(user_id):
-                        await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, IN_WORK_SCREEN)
-                    else:
-                        await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=start_kb,
-                                               disable_web_page_preview=True)
-                        change_screen(user_id, START_SCREEN)
-                await bot.send_message(chat_id=chat_id, text=ERROR_MSG,
-                                       disable_web_page_preview=True)
+                    await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
+                                           disable_web_page_preview=True)
+                    change_screen(user_id, IN_WORK_SCREEN)
+                else:
+                    await bot.send_message(chat_id=chat_id, text=ERROR_MSG,
+                                           disable_web_page_preview=True)
             else:
                 await bot.send_message(chat_id=chat_id, text=SECOND_ERROR_MSG,
                                        disable_web_page_preview=True)
