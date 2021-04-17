@@ -1,0 +1,3 @@
+pyOpenSSL
+service_identity
+requests
