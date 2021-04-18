@@ -7,7 +7,7 @@ from Txt_Const import NOT_DONE, DONE, STATUS_ERROR_MSG
 
 
 def generate_status_msg(user_queue):
-    if 5 <= user_queue[0] <= 20:
+    if 11 <= user_queue[0] % 100 <= 20:
         file_spell = "файлов"
     elif user_queue[0] % 10 == 1:
         file_spell = "файл"
