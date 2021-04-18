@@ -20,10 +20,10 @@ def generate_status_msg(user_queue):
         status_msg = f"Всего в очереди {user_queue[0]} {file_spell}\n\n"
         nearest_file = user_queue[0] - user_queue[1][0]
         # Закомментить стркоу ниже, если котики не нужны :(
-        status_msg += "А пока вы ждете, держите милого котика :3\n\n"
+        status_msg += "А пока вы ждёте - держите милого котика :3\n\n"
         for status in user_queue[1]:
             nearest_file = min(user_queue[0] - status, nearest_file)
-        status_msg += f"Ближайший файл находится на позиции №{nearest_file}"
+        status_msg += f"Ближайший ваш файл находится на позиции №{nearest_file}"
         return status_msg
     else:
         return STATUS_ERROR_MSG

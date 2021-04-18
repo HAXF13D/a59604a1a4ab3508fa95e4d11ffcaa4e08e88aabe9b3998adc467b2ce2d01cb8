@@ -61,7 +61,10 @@ def check_file_status(user_id):
         for i in range(len(files)):
             if files[i].user_id == user_id:
                 user_queue.append(i)
-        result = [queue_len, user_queue]
+        if len(user_queue) == 0:
+            result = None
+        else:
+            result = [queue_len, user_queue]
         return result
     else:
         return None
@@ -120,7 +123,7 @@ def misha_func():
                 except Exception as e:
                     print(f"Misha_func err\n{e}")
                     user_id = files[-1].user_id
-                    error_msg = f"Что-то не так с файлом {files[-1].original_name}\nПроверте коректность файла!"
+                    error_msg = f"Что-то не так с файлом {files[-1].original_name}\nПроверьте корректность файла!"
                     files.pop()
                     remove_file(user_id)
                     chat_id = get_chat_id(user_id)

@@ -31,6 +31,7 @@ async def handle_messages(messages: types.Message):
     message = json.loads(str(messages))
     is_bot = message['from']['is_bot']
     if not is_bot:
+        random.seed()
         user_id = message['from']['id']
         chat_id = message['chat']['id']
         username = message['from']['first_name']
@@ -44,7 +45,7 @@ async def handle_messages(messages: types.Message):
                 # Если введена команда /start
                 if msg_text == '/start':
                     # Проверка отправлял ли уже пользователь файлы на обработку
-                    await bot.send_message(chat_id=chat_id, text=CHOOSE_MSG, reply_markup=in_work_kb,
+                    await bot.send_message(chat_id=chat_id, text=START_MSG, reply_markup=in_work_kb,
                                            disable_web_page_preview=True)
                     change_screen(user_id, IN_WORK_SCREEN)
 
@@ -62,7 +63,7 @@ async def handle_messages(messages: types.Message):
                         # Код ниже отправляет сообщение без котят :(
                         # await bot.send_message(chat_id=chat_id, text=status_msg, reply_markup=back_kb,
                         #                       disable_web_page_preview=True)
-                        random.seed()
+
                         kitten_number = random.randint(1, 22)
                         path = f'./Kittens/{kitten_number}.jpg'
                         await bot.send_photo(chat_id=chat_id,
@@ -74,6 +75,7 @@ async def handle_messages(messages: types.Message):
                     else:
                         await bot.send_message(chat_id=chat_id, text=STATUS_ERROR_MSG,
                                                disable_web_page_preview=True)
+
                 # Если текущий экран - экран помощи
                 elif cur_screen in BACK_SCREENS:
                     # Если поступила команда "назад"
@@ -101,7 +103,6 @@ async def handle_messages(messages: types.Message):
                             # Код ниже отправляет сообщение без котят :(
                             # await bot.send_message(chat_id=chat_id, text=status_msg, reply_markup=back_kb,
                             #                       disable_web_page_preview=True)
-                            random.seed()
                             kitten_number = random.randint(1, 22)
                             path = f'./Kittens/{kitten_number}.jpg'
                             await bot.send_photo(chat_id=chat_id,
